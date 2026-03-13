@@ -14,7 +14,252 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ad_sales: {
+        Row: {
+          ad_date: string | null
+          category: string | null
+          client_name: string | null
+          created_at: string
+          dataset_id: string
+          id: string
+          placement: string | null
+          raw_data: Json | null
+          revenue: number | null
+        }
+        Insert: {
+          ad_date?: string | null
+          category?: string | null
+          client_name?: string | null
+          created_at?: string
+          dataset_id: string
+          id?: string
+          placement?: string | null
+          raw_data?: Json | null
+          revenue?: number | null
+        }
+        Update: {
+          ad_date?: string | null
+          category?: string | null
+          client_name?: string | null
+          created_at?: string
+          dataset_id?: string
+          id?: string
+          placement?: string | null
+          raw_data?: Json | null
+          revenue?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_sales_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      datasets: {
+        Row: {
+          columns: Json | null
+          created_at: string
+          error_message: string | null
+          file_path: string
+          file_size: number
+          id: string
+          mime_type: string
+          name: string
+          preview_data: Json | null
+          row_count: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          columns?: Json | null
+          created_at?: string
+          error_message?: string | null
+          file_path: string
+          file_size?: number
+          id?: string
+          mime_type?: string
+          name: string
+          preview_data?: Json | null
+          row_count?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          columns?: Json | null
+          created_at?: string
+          error_message?: string | null
+          file_path?: string
+          file_size?: number
+          id?: string
+          mime_type?: string
+          name?: string
+          preview_data?: Json | null
+          row_count?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      forecasts: {
+        Row: {
+          confidence_high: number | null
+          confidence_low: number | null
+          created_at: string
+          forecast_type: string
+          id: string
+          model_name: string | null
+          period_end: string
+          period_start: string
+          predicted_value: number | null
+        }
+        Insert: {
+          confidence_high?: number | null
+          confidence_low?: number | null
+          created_at?: string
+          forecast_type: string
+          id?: string
+          model_name?: string | null
+          period_end: string
+          period_start: string
+          predicted_value?: number | null
+        }
+        Update: {
+          confidence_high?: number | null
+          confidence_low?: number | null
+          created_at?: string
+          forecast_type?: string
+          id?: string
+          model_name?: string | null
+          period_end?: string
+          period_start?: string
+          predicted_value?: number | null
+        }
+        Relationships: []
+      }
+      regions: {
+        Row: {
+          created_at: string
+          delivered_copies: number | null
+          demand_trend: string | null
+          id: string
+          name: string
+          sold_copies: number | null
+        }
+        Insert: {
+          created_at?: string
+          delivered_copies?: number | null
+          demand_trend?: string | null
+          id?: string
+          name: string
+          sold_copies?: number | null
+        }
+        Update: {
+          created_at?: string
+          delivered_copies?: number | null
+          demand_trend?: string | null
+          id?: string
+          name?: string
+          sold_copies?: number | null
+        }
+        Relationships: []
+      }
+      sales_records: {
+        Row: {
+          category: string | null
+          copies_sold: number | null
+          created_at: string
+          dataset_id: string
+          id: string
+          raw_data: Json | null
+          record_date: string | null
+          region: string | null
+          revenue: number | null
+        }
+        Insert: {
+          category?: string | null
+          copies_sold?: number | null
+          created_at?: string
+          dataset_id: string
+          id?: string
+          raw_data?: Json | null
+          record_date?: string | null
+          region?: string | null
+          revenue?: number | null
+        }
+        Update: {
+          category?: string | null
+          copies_sold?: number | null
+          created_at?: string
+          dataset_id?: string
+          id?: string
+          raw_data?: Json | null
+          record_date?: string | null
+          region?: string | null
+          revenue?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_records_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscribers: {
+        Row: {
+          age_group: string | null
+          created_at: string
+          dataset_id: string
+          id: string
+          name: string | null
+          plan: string | null
+          preferred_category: string | null
+          raw_data: Json | null
+          region: string | null
+          start_date: string | null
+          subscriber_id: string | null
+        }
+        Insert: {
+          age_group?: string | null
+          created_at?: string
+          dataset_id: string
+          id?: string
+          name?: string | null
+          plan?: string | null
+          preferred_category?: string | null
+          raw_data?: Json | null
+          region?: string | null
+          start_date?: string | null
+          subscriber_id?: string | null
+        }
+        Update: {
+          age_group?: string | null
+          created_at?: string
+          dataset_id?: string
+          id?: string
+          name?: string | null
+          plan?: string | null
+          preferred_category?: string | null
+          raw_data?: Json | null
+          region?: string | null
+          start_date?: string | null
+          subscriber_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscribers_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
