@@ -70,10 +70,10 @@ Deno.serve(async (req) => {
       }
     } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
       const buffer = await fileData.arrayBuffer();
-      const workbook = read(new Uint8Array(buffer), { type: "array" });
+      const workbook = XLSX.read(new Uint8Array(buffer), { type: "array" });
       const firstSheet = workbook.SheetNames[0];
       const sheet = workbook.Sheets[firstSheet];
-      rows = utils.sheet_to_json(sheet) as Record<string, unknown>[];
+      rows = XLSX.utils.sheet_to_json(sheet) as Record<string, unknown>[];
       if (rows.length > 0) {
         columns = Object.keys(rows[0]);
       }
