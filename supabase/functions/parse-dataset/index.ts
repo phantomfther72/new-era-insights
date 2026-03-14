@@ -110,11 +110,80 @@ Deno.serve(async (req) => {
     if (action === "import") {
       // Import rows into the appropriate table based on column detection
       const colSet = new Set(columns.map(c => c.toLowerCase()));
+      // Also create a case-insensitive column lookup
+      const colLookup: Record<string, string> = {};
+      for (const col of columns) {
+        colLookup[col.toLowerCase()] = col;
+      }
+      const getVal = (row: Record<string, unknown>, ...keys: string[]) => {
+        for (const k of keys) {
+          const actual = colLookup[k.toLowerCase()];
+          if (actual && row[actual] !== undefined && row[actual] !== null && row[actual] !== "") return row[actual];
+        }
+        return null;
+      };
+
       let importedTo = "raw";
       let importCount = 0;
 
+      // Detect if circulation data (has delivered + returned + sold + client)
+      const isCirculation = (colSet.has("delivered") || colSet.has("deliver")) &&
+        (colSet.has("returned") || colSet.has("return") || colSet.has("returns")) &&
+        (colSet.has("sold") || colSet.has("copies_sold")) &&
+        (colSet.has("client") || colSet.has("client_name") || colSet.has("outlet"));
+
+      if (isCirculation) {
+        const circRows = rows.map(r => {
+          const delivered = Number(getVal(r, "delivered", "deliver") || 0);
+          const sold = Number(getVal(r, "sold", "copies_sold") || 0);
+          const returnedRaw = getVal(r, "returned", "return", "returns");
+          let returned = 0;
+          let returnedPct = 0;
+
+          // Handle returned — could be quantity or percentage string
+          if (returnedRaw !== null) {
+            const strVal = String(returnedRaw).trim();
+            if (strVal.includes("%")) {
+              returnedPct = parseFloat(strVal.replace("%", "")) || 0;
+              returned = delivered > 0 ? Math.round(delivered * returnedPct / 100) : 0;
+            } else {
+              returned = Number(strVal) || 0;
+              returnedPct = delivered > 0 ? (returned / delivered) * 100 : 0;
+            }
+          }
+
+          // Also check for explicit return_percentage column
+          const explicitPct = getVal(r, "returned_percentage", "return_percentage", "return_%", "return_pct");
+          if (explicitPct !== null) {
+            returnedPct = parseFloat(String(explicitPct).replace("%", "")) || returnedPct;
+          }
+
+          const sellThrough = delivered > 0 ? (sold / delivered) * 100 : 0;
+
+          return {
+            dataset_id,
+            period_start: getVal(r, "start_date", "start date", "period_start", "date", "month") || null,
+            period_end: getVal(r, "end_date", "end date", "period_end") || null,
+            client: getVal(r, "client", "client_name", "outlet", "name") || "Unknown",
+            delivered,
+            returned,
+            returned_percentage: Math.round(returnedPct * 100) / 100,
+            sold,
+            sell_through_rate: Math.round(sellThrough * 100) / 100,
+            raw_data: r,
+          };
+        });
+
+        for (let i = 0; i < circRows.length; i += 500) {
+          const chunk = circRows.slice(i, i + 500);
+          const { error } = await supabase.from("circulation_records").insert(chunk);
+          if (error) console.error("Circulation insert error:", error);
+          else importCount += chunk.length;
+        }
+        importedTo = "circulation_records";
+      }
       // Detect if sales data
-      if (colSet.has("copies_sold") || colSet.has("revenue") || (colSet.has("region") && colSet.has("date"))) {
+      else if (colSet.has("copies_sold") || colSet.has("revenue") || (colSet.has("region") && colSet.has("date"))) {
         const salesRows = rows.map(r => ({
           dataset_id,
           record_date: r["date"] || r["Date"] || r["record_date"] || null,
@@ -125,7 +194,6 @@ Deno.serve(async (req) => {
           raw_data: r,
         }));
 
-        // Batch insert in chunks of 500
         for (let i = 0; i < salesRows.length; i += 500) {
           const chunk = salesRows.slice(i, i + 500);
           const { error } = await supabase.from("sales_records").insert(chunk);
