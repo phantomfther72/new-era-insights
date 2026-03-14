@@ -1,1 +1,7 @@
 project_id = "gorwbvsvipzjiwgbkwsp"
+
+[functions.parse-dataset]
+verify_jwt = false
+
+[functions.generate-forecast-insights]
+verify_jwt = false

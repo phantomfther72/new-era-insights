@@ -58,6 +58,59 @@ export type Database = {
           },
         ]
       }
+      circulation_records: {
+        Row: {
+          client: string | null
+          created_at: string
+          dataset_id: string
+          delivered: number | null
+          id: string
+          period_end: string | null
+          period_start: string | null
+          raw_data: Json | null
+          returned: number | null
+          returned_percentage: number | null
+          sell_through_rate: number | null
+          sold: number | null
+        }
+        Insert: {
+          client?: string | null
+          created_at?: string
+          dataset_id: string
+          delivered?: number | null
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          raw_data?: Json | null
+          returned?: number | null
+          returned_percentage?: number | null
+          sell_through_rate?: number | null
+          sold?: number | null
+        }
+        Update: {
+          client?: string | null
+          created_at?: string
+          dataset_id?: string
+          delivered?: number | null
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          raw_data?: Json | null
+          returned?: number | null
+          returned_percentage?: number | null
+          sell_through_rate?: number | null
+          sold?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "circulation_records_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       datasets: {
         Row: {
           columns: Json | null
