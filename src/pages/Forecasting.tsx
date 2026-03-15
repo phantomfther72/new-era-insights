@@ -2,6 +2,7 @@ import TopBar from "@/components/TopBar";
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateForecasts, type CirculationRecord, type ForecastResult, type ClientForecast } from "@/lib/forecasting";
+import { buildCommercialPerformanceModel, type DailySalesRecord, type SalesEvent } from "@/lib/commercialPerformance";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, BarChart, Bar, Cell, Legend,
@@ -62,6 +63,40 @@ const Forecasting = () => {
   const forecast = useMemo<ForecastResult | null>(() => {
     if (records.length === 0) return null;
     return generateForecasts(records);
+  }, [records]);
+
+  const commercialModel = useMemo(() => {
+    if (records.length === 0) return null;
+
+    const dailySalesRecords: DailySalesRecord[] = records.map((record) => ({
+      date: (record.period_start || record.period_end || record.created_at).slice(0, 10),
+      location: record.client || "Unknown",
+      distributionPoint: record.client || "Unknown",
+      supplied: record.delivered || 0,
+      sold: record.sold || 0,
+      returned: record.returned || 0,
+    }));
+
+    const soldValues = dailySalesRecords.map((entry) => entry.sold);
+    const avgSold = soldValues.length > 0
+      ? soldValues.reduce((sum, value) => sum + value, 0) / soldValues.length
+      : 0;
+    const soldVariance = soldValues.length > 1
+      ? soldValues.reduce((sum, value) => sum + (value - avgSold) ** 2, 0) / (soldValues.length - 1)
+      : 0;
+    const spikeThreshold = avgSold + Math.sqrt(soldVariance) * 1.4;
+
+    const detectedEvents: SalesEvent[] = dailySalesRecords
+      .filter((entry) => entry.sold > spikeThreshold)
+      .slice(-14)
+      .map((entry) => ({
+        date: entry.date,
+        name: "Detected breaking-news sales spike",
+        impact: "positive" as const,
+        intensity: 0.45,
+      }));
+
+    return buildCommercialPerformanceModel(dailySalesRecords, detectedEvents);
   }, [records]);
 
   const loadInsights = async () => {
@@ -131,6 +166,7 @@ const Forecasting = () => {
   }
 
   const { clients, totals, actualVsPredicted, monthlyTrend } = forecast;
+  const commercialChartData = commercialModel?.recommendations.slice(0, 8) || [];
 
   return (
     <div>
@@ -329,6 +365,58 @@ const Forecasting = () => {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="rounded border border-border bg-card p-5">
+                <h3 className="font-heading text-sm font-bold text-card-foreground mb-2">Demand vs Recommended Supply (Top Outlets)</h3>
+                <p className="text-xs text-muted-foreground mb-4">Visual demand planning output based on historical sales, returns, and detected spike events.</p>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={commercialChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,32%,91%)" />
+                    <XAxis dataKey="distributionPoint" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={65} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="forecastDemand" name="Forecast Demand" fill="hsl(224,76%,33%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="recommendedSupply" name="Recommended Supply" fill="hsl(152,69%,31%)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="rounded border border-border bg-card p-5">
+                <h3 className="font-heading text-sm font-bold text-card-foreground mb-2">Trend Split by Distribution Outlet</h3>
+                <p className="text-xs text-muted-foreground mb-4">Use this to identify where to increase copies and where to cut back to reduce returns.</p>
+                <div className="space-y-3">
+                  {(commercialModel?.recommendations || []).slice(0, 6).map((item) => (
+                    <div key={`${item.location}-${item.distributionPoint}`} className="rounded border border-border p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium text-card-foreground">{item.distributionPoint}</p>
+                        <Badge variant={item.demandTrend === "growing" ? "default" : item.demandTrend === "declining" ? "destructive" : "secondary"}>
+                          {item.demandTrend}
+                        </Badge>
+                      </div>
+                      <Progress value={Math.min(100, Math.round((item.forecastDemand / Math.max(item.recommendedSupply, 1)) * 100))} className="h-2" />
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Forecast {item.forecastDemand.toLocaleString()} · Recommended {item.recommendedSupply.toLocaleString()} · Unsold risk {item.expectedUnsoldCopies.toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {commercialModel && (
+              <div className="rounded border border-border bg-card p-5">
+                <h3 className="font-heading text-sm font-bold text-card-foreground mb-3">Commercial Model Summary</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <StatCard label="Forecast Demand" value={commercialModel.summary.totalForecastDemand.toLocaleString()} />
+                  <StatCard label="Recommended Supply" value={commercialModel.summary.totalRecommendedSupply.toLocaleString()} />
+                  <StatCard label="Projected Unsold" value={commercialModel.summary.projectedUnsoldCopies.toLocaleString()} />
+                  <StatCard label="Growing Outlets" value={commercialModel.summary.growingOutlets.toString()} />
+                  <StatCard label="Declining Outlets" value={commercialModel.summary.decliningOutlets.toString()} />
+                </div>
+              </div>
+            )}
+
             {/* Model Transparency */}
             <div className="rounded border border-border bg-card p-5">
               <h3 className="font-heading text-sm font-bold text-card-foreground mb-3">Model Methodology</h3>
@@ -426,6 +514,15 @@ function KpiCard({ label, value, icon: Icon, accent }: { label: string; value: s
         <Icon className={`h-3.5 w-3.5 ${accent ? "text-primary" : "text-muted-foreground"}`} />
       </div>
       <p className={`font-heading text-lg font-bold tabular-nums ${accent ? "text-primary" : "text-card-foreground"}`}>{value}</p>
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded border border-border/60 bg-muted/20 p-3">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 text-lg font-heading font-bold tabular-nums text-card-foreground">{value}</p>
     </div>
   );
 }
