@@ -219,39 +219,66 @@ export type Database = {
         }
         Relationships: []
       }
+      outlets: {
+        Row: {
+          created_at: string
+          distribution_point: string | null
+          id: string
+          outlet_name: string
+        }
+        Insert: {
+          created_at?: string
+          distribution_point?: string | null
+          id?: string
+          outlet_name: string
+        }
+        Update: {
+          created_at?: string
+          distribution_point?: string | null
+          id?: string
+          outlet_name?: string
+        }
+        Relationships: []
+      }
       sales_records: {
         Row: {
           category: string | null
           copies_sold: number | null
           created_at: string
-          dataset_id: string
+          dataset_id: string | null
           id: string
+          outlet_id: string | null
           raw_data: Json | null
           record_date: string | null
           region: string | null
           revenue: number | null
+          source: string
         }
         Insert: {
           category?: string | null
           copies_sold?: number | null
           created_at?: string
-          dataset_id: string
+          dataset_id?: string | null
           id?: string
+          outlet_id?: string | null
           raw_data?: Json | null
           record_date?: string | null
           region?: string | null
           revenue?: number | null
+          source?: string
         }
         Update: {
           category?: string | null
           copies_sold?: number | null
           created_at?: string
-          dataset_id?: string
+          dataset_id?: string | null
           id?: string
+          outlet_id?: string | null
           raw_data?: Json | null
           record_date?: string | null
           region?: string | null
           revenue?: number | null
+          source?: string
         }
         Relationships: [
           {
@@ -261,7 +288,73 @@ export type Database = {
             referencedRelation: "datasets"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sales_records_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      returns_records: {
+        Row: {
+          created_at: string
+          id: string
+          outlet_id: string
+          return_date: string
+          returned_copies: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          outlet_id: string
+          return_date: string
+          returned_copies: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          outlet_id?: string
+          return_date?: string
+          returned_copies?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "returns_records_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_calendar: {
+        Row: {
+          created_at: string
+          event_date: string
+          event_name: string
+          event_type: string
+          expected_impact: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          event_date: string
+          event_name: string
+          event_type?: string
+          expected_impact?: string | null
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          event_date?: string
+          event_name?: string
+          event_type?: string
+          expected_impact?: string | null
+          id?: string
+        }
+        Relationships: []
       }
       subscribers: {
         Row: {
